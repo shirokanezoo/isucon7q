@@ -32,6 +32,7 @@ end
 
 class AwesomeFetch
   STREAM_KEY = 'isubata:stream:message'
+  STREAM_KEY2 = 'isubata:stream:message2'
 
   def self.instance
     @instance ||= AwesomeFetch.new.tap(&:start)
@@ -71,7 +72,7 @@ class AwesomeFetch
   def start
     @thread = Thread.new do
       redis = connect_redis()
-      redis.subscribe(STREAM_KEY) do |on|
+      redis.subscribe(STREAM_KEY, STREAM_KEY2) do |on|
         on.subscribe do |ch, subs|
           puts "AwesomeFetch subscribed to #{ch.inspect} (#{subs} subscriptions)"
         end
@@ -216,7 +217,7 @@ class App < Sinatra::Base
     db.query('SELECT id FROM channel').each do |ch|
       db.query("SELECT * FROM message WHERE channel_id = #{ch['id']} ORDER BY id DESC LIMIT #{MessageBin::LIMIT}").to_a.reverse_each do |row|
         user = all_users.fetch row['user_id']
-        redis.publish('isubata:stream:message',
+        redis.publish('isubata:stream:message2',
                     {
                     'type' => 'message',
                     'id' => row['id'],

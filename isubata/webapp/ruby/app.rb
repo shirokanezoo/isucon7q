@@ -169,6 +169,7 @@ class App < Sinatra::Base
 
     @channel_id = params[:channel_id].to_i
     @channels, @description = get_channel_list_info(@channel_id)
+    session[:bakusoku] = true
     erb :channel
   end
 
@@ -251,8 +252,6 @@ class App < Sinatra::Base
 
     max_message_id = rows.empty? ? 0 : rows.map {  |row| row['id'] }.max
     redis.hset(redis_key_lastreads(user_id), channel_id, max_message_id)
-
-    session[:bakusoku] = true
 
     content_type :json
     response.to_json

@@ -311,6 +311,8 @@ class App < Sinatra::Base
     statement.execute(name, description)
     channel_id = db.last_id
     statement.close
+
+    redis.hset(redis_key_total_messages, channel_id, 0)
     redirect "/channel/#{channel_id}", 303
   end
 

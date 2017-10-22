@@ -265,8 +265,10 @@ class App < Sinatra::Base
       return 403
     end
 
-    unless session.delete(:bakusoku)
-      AwesomeFetch.instance.wait
+    unless request.env['HTTP_X_AWESOME_PROXY']
+      unless session.delete(:bakusoku)
+        AwesomeFetch.instance.wait
+      end
     end
 
     rs = redis.hgetall(redis_key_total_messages)

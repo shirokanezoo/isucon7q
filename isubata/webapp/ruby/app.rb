@@ -427,10 +427,10 @@ class App < Sinatra::Base
       username: ENV.fetch('ISUBATA_DB_USER') { 'root' },
       password: ENV.fetch('ISUBATA_DB_PASSWORD') { '' },
       database: 'isubata',
-      encoding: 'utf8mb4'
-    ).tap do |mysql|
-      mysql.query('SET SESSION sql_mode=\'TRADITIONAL,NO_AUTO_VALUE_ON_ZERO,ONLY_FULL_GROUP_BY\'')
-    end
+      encoding: 'utf8mb4',
+      reconnect: true,
+      init_command: %q!SET SESSION sql_mode='TRADITIONAL,NO_AUTO_VALUE_ON_ZERO,ONLY_FULL_GROUP_BY'!
+    )
   end
 
   def db_get_user(user_id)

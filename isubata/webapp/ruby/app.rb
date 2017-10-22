@@ -515,6 +515,7 @@ class App < Sinatra::Base
     statement.close
     redis.hincrby(redis_key_total_messages, channel_id, 1)
     redis.publish(AwesomeFetch::STREAM_KEY, '')
+    session[:bakusoku] = true
     messages
   end
 
@@ -529,6 +530,7 @@ class App < Sinatra::Base
     statement.execute(user, salt, pass_digest, user, 'default.png')
     row = db.query('SELECT LAST_INSERT_ID() AS last_insert_id').first
     statement.close
+    session[:bakusoku] = true
     row['last_insert_id']
   end
 

@@ -21,6 +21,7 @@ datadir=/var/lib/mysql
 symbolic-links=0
 
 max_allowed_packet=300M
+max_connections=512
 
 ## cache size
 table_open_cache = 2000

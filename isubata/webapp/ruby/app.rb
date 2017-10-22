@@ -338,7 +338,7 @@ class App < Sinatra::Base
     rows = db.query('SELECT `name`, `data` FROM `image`')
 
     rows.each do |row|
-      File.write("#{ENV['HOME']}/icons/#{name}", data)
+      File.write("#{ENV['HOME']}/icons/#{row['name']}", row['data'])
     end
 
     return "OK"

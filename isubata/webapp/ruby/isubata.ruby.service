@@ -6,7 +6,7 @@ WorkingDirectory=/home/isucon/isubata/webapp/ruby
 EnvironmentFile=/home/isucon/env.sh
 Environment=RACK_ENV=production
 
-ExecStart = /home/isucon/isubata/webapp/start.sh
+ExecStart = /home/isucon/isubata/webapp/ruby/start.sh
 
 Restart   = always
 Type      = simple

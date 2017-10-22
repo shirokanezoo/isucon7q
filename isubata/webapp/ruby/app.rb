@@ -484,7 +484,7 @@ class App < Sinatra::Base
 
     display_name = params[:display_name]
     avatar_name = nil
-    avatar_data = nil
+    # avatar_data = nil
 
     file = params[:avatar_icon]
     unless file.nil?

@@ -125,7 +125,7 @@ class App < Sinatra::Base
 
   post '/login' do
     name = params[:name]
-    statement = db.prepare('SELECT * FROM user WHERE name = ?')
+    statement = db.prepare('SELECT * FROM user WHERE name = ? LIMIT 1')
     row = statement.execute(name).first
     if row.nil? || row['password'] != Digest::SHA1.hexdigest(row['salt'] + params[:password])
       return 403
@@ -346,18 +346,25 @@ class App < Sinatra::Base
       end
     end
 
+    keys = []
+    values = []
+
     if !avatar_name.nil? && !avatar_data.nil?
       # statement = db.prepare('INSERT INTO image (name, data) VALUES (?, ?)')
       # statement.execute(avatar_name, avatar_data)
       # statement.close
-      statement = db.prepare('UPDATE user SET avatar_icon = ? WHERE id = ?')
-      statement.execute(avatar_name, user['id'])
-      statement.close
+      keys << 'avatar_icon = ?'
+      values << avatar_name
     end
 
     if !display_name.nil? || !display_name.empty?
-      statement = db.prepare('UPDATE user SET display_name = ? WHERE id = ?')
-      statement.execute(display_name, user['id'])
+      keys << 'display_name = ?'
+      values << display_name
+    end
+
+    if keys.size > 0
+      statement = db.prepare("UPDATE user SET #{keys.join(', ')} WHERE id = ?")
+      statement.execute(*values, user['id'])
       statement.close
     end
 
@@ -469,6 +476,7 @@ class App < Sinatra::Base
 
   def get_users(ids)
     return {} if ids.empty?
+
     rows = db.query("SELECT id, name, display_name, avatar_icon FROM user WHERE id IN (#{ids.join(',')})")
 
     dict = {}

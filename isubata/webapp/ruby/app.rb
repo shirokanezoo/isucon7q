@@ -415,13 +415,12 @@ class App < Sinatra::Base
           return 400
         end
 
-        data = file[:tempfile].read
-        digest = Digest::SHA1.hexdigest(data)
+        data = file[:tempfile].read(1024)
+        digest = Digest::SHA1.hexdigest("#{file[:tempfile].size}.#{data}")
 
         avatar_name = digest + ext
-        avatar_data = data
         path = File.join(icons_dir, avatar_name)
-        File.write(path, avatar_data) unless File.exists?(path)
+        FileUtils.cp(file[:tempfile].path, path) unless File.exists?(path)
       end
     end
 

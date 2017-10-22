@@ -4,52 +4,17 @@ require 'sinatra/base'
 require 'hiredis'
 require 'redis'
 require 'timeout'
-require 'msgpack'
 
-class MessageBin
-  LIMIT = 100
-  def initialize
-    @messages = []
-  end
-
-  def push(row)
-    @messages << row
-    @messages.shift([@messages.size - LIMIT,0].max)
-    self
-  end
-
-  def [](*args)
-    @messages[*args]
-  end
-
-  def since(id, limit: 100)
-    idx = @messages.index { |_| _['id'] > id }
-    if idx
-      @messages[idx + 1 .. idx + limit]
-    end
-  end
-end
-
-require 'singleton'
 class AwesomeFetch
   STREAM_KEY = 'isubata:stream:message'
-  STREAM_KEY2 = 'isubata:stream:message2'
-  include Singleton
+
+  def self.instance
+    @instance ||= AwesomeFetch.new.tap(&:start)
+  end
 
   def initialize()
     @subscribers = {}
     @lock = Mutex.new
-    reset
-  end
-
-  def reset
-    @lock.synchronize do
-      @messages = {}
-    end
-  end
-
-  def channel(id)
-    @messages[id]
   end
 
   def wait(timeout: 5)
@@ -70,7 +35,7 @@ class AwesomeFetch
   def start
     @thread = Thread.new do
       redis = connect_redis()
-      redis.subscribe(STREAM_KEY, STREAM_KEY2) do |on|
+      redis.subscribe(STREAM_KEY) do |on|
         on.subscribe do |ch, subs|
           puts "AwesomeFetch subscribed to #{ch.inspect} (#{subs} subscriptions)"
         end
@@ -93,72 +58,10 @@ class AwesomeFetch
     @subscribers.dup.each_key do |th|
       th.wakeup
     end
-
-    case payload['type']
-    when 'message'
-      p payload
-      on_message payload
-    when 'reset'
-      puts "AwesomeFetch Reset #{$$}"
-      reset
-    when 'init'
-      puts "AwesomeFetch Init #{$$}"
-      reset
-      on_init
-      puts "AwesomeFetch Init DONE #{$$}"
-    end
-  end
-
-  def on_message(message)
-    bin = (@messages[message['channel_id']] ||= MessageBin.new)
-    bin.push message
-  end
-
-  def init(&block)
-    @init = block
-  end
-
-  def on_init
-    @init&.call
   end
 end
 
 AwesomeFetch.instance.start
-AwesomeFetch.instance.init do
-  db = Mysql2::Client.new(
-      host: ENV.fetch('ISUBATA_DB_HOST') { 'localhost' },
-      port: ENV.fetch('ISUBATA_DB_PORT') { '3306' },
-      username: ENV.fetch('ISUBATA_DB_USER') { 'root' },
-      password: ENV.fetch('ISUBATA_DB_PASSWORD') { '' },
-      database: 'isubata',
-      encoding: 'utf8mb4',
-      reconnect: true,
-      init_command: %q!SET SESSION sql_mode='TRADITIONAL,NO_AUTO_VALUE_ON_ZERO,ONLY_FULL_GROUP_BY'!
-    )
-
-    all_users = {}
-    db.query("SELECT id, name, display_name, avatar_icon FROM user").each do  |row|
-      all_users[row['id']] = row.select { |k, v| %w[name display_name avatar_icon].include?(k) }
-    end
-
-    db.query('SELECT id FROM channel').each do |ch|
-      db.query("SELECT * FROM message WHERE channel_id = #{ch['id']} ORDER BY id DESC LIMIT #{MessageBin::LIMIT}").to_a.reverse_each do |row|
-        user = all_users.fetch row['user_id']
-        AwesomeFetch.instance.on_message(
-                    {
-                    'type' => 'message',
-                    'id' => row['id'],
-                    'channel_id' => row['channel_id'],
-                    'user' => { 'name' => user['name'], 'display_name' => user['display_name'], 'avatar_icon' => user['avatar_icon'] },
-                    'date' => row['created_at'].strftime("%Y/%m/%d %H:%M:%S"),
-                    'content' => row['content'],
-                    },
-                     )
-      end
-    end
-end
-AwesomeFetch.instance.on_init
-
 
 # AwesomeFetch.
 
@@ -209,10 +112,10 @@ class App < Sinatra::Base
     enable :sessions
   end
 
-  #configure :development do
-  #  require 'sinatra/reloader'
-  #  register Sinatra::Reloader
-  #end
+  configure :development do
+    require 'sinatra/reloader'
+    register Sinatra::Reloader
+  end
 
   helpers do
     def user
@@ -249,9 +152,6 @@ class App < Sinatra::Base
       statement.close
       redis.hset(redis_key_total_messages, ch, cnt)
     end
-
-    redis.publish('isubata:stream:message', {'type' => 'init'}.to_msgpack)
-    sleep 3
 
     204
   end
@@ -335,35 +235,28 @@ class App < Sinatra::Base
 
     channel_id = params[:channel_id].to_i
     last_message_id = params[:last_message_id].to_i
-
-    bin = AwesomeFetch.instance.channel(channel_id)
-    res = bin&.since(last_message_id)
-
-    unless res
-      statement = db.prepare('SELECT * FROM message WHERE id > ? AND channel_id = ? ORDER BY id DESC LIMIT 100')
-      rows = statement.execute(last_message_id, channel_id).to_a
-      statement.close
-      users = get_users(rows.map { |r| r['user_id'] }.uniq)
-      res= []
-      rows.each do |row|
-        r = {}
-        r['id'] = row['id']
-        # statement = db.prepare('SELECT name, display_name, avatar_icon FROM user WHERE id = ?')
-        r['user'] = users[row['user_id']] # statement.execute(row['user_id']).first
-        r['date'] = row['created_at'].strftime("%Y/%m/%d %H:%M:%S")
-        r['content'] = row['content']
-        res<< r
-        # statement.close
-      end
-      response.headers['X-Awesome-Fetch'] = 'miss'
-      res.reverse! # TODO:
+    statement = db.prepare('SELECT * FROM message WHERE id > ? AND channel_id = ? ORDER BY id DESC LIMIT 100')
+    rows = statement.execute(last_message_id, channel_id).to_a
+    statement.close
+    users = get_users(rows.map { |r| r['user_id'] }.uniq)
+    response = []
+    rows.each do |row|
+      r = {}
+      r['id'] = row['id']
+      # statement = db.prepare('SELECT name, display_name, avatar_icon FROM user WHERE id = ?')
+      r['user'] = users[row['user_id']] # statement.execute(row['user_id']).first
+      r['date'] = row['created_at'].strftime("%Y/%m/%d %H:%M:%S")
+      r['content'] = row['content']
+      response << r
+      # statement.close
     end
+    response.reverse!
 
-    max_message_id = res.empty? ? 0 : res.map { |_| _['id'] }.max
+    max_message_id = rows.empty? ? 0 : rows.map {  |row| row['id'] }.max
     redis.hset(redis_key_lastreads(user_id), channel_id, max_message_id)
 
     content_type :json
-    res.to_json
+    response.to_json
   end
 
   get '/fetch' do
@@ -507,7 +400,7 @@ class App < Sinatra::Base
 
     display_name = params[:display_name]
     avatar_name = nil
-    # avatar_data = nil
+    avatar_data = nil
 
     file = params[:avatar_icon]
     unless file.nil?
@@ -637,24 +530,11 @@ class App < Sinatra::Base
   end
 
   def db_add_message(channel_id, user_id, content)
-    time = Time.now
-    redis.publish(AwesomeFetch::STREAM_KEY,
-                  {
-                  'type' => 'message',
-                  'id' => db.last_id,
-                  'channel_id' => channel_id,
-                  'user' => { 'name' => user['name'], 'display_name' => user['display_name'], 'avatar_icon' => user['avatar_icon'] },
-                  'date' => time.strftime("%Y/%m/%d %H:%M:%S"),
-                  'content' => content,
-                  }.to_msgpack
-                 )
-
-    statement = db.prepare('INSERT INTO message (channel_id, user_id, content, created_at) VALUES (?, ?, ?, ?)')
-    messages = statement.execute(channel_id, user_id, content, time)
+    statement = db.prepare('INSERT INTO message (channel_id, user_id, content, created_at) VALUES (?, ?, ?, NOW())')
+    messages = statement.execute(channel_id, user_id, content)
     statement.close
-
     redis.hincrby(redis_key_total_messages, channel_id, 1)
-
+    redis.publish(AwesomeFetch::STREAM_KEY, '')
     session[:bakusoku] = true
     messages
   end
@@ -668,9 +548,10 @@ class App < Sinatra::Base
     pass_digest = Digest::SHA1.hexdigest(salt + password)
     statement = db.prepare('INSERT INTO user (name, salt, password, display_name, avatar_icon, created_at) VALUES (?, ?, ?, ?, ?, NOW())')
     statement.execute(user, salt, pass_digest, user, 'default.png')
+    row = db.query('SELECT LAST_INSERT_ID() AS last_insert_id').first
     statement.close
     session[:bakusoku] = true
-    db.last_id
+    row['last_insert_id']
   end
 
   def get_channel_list_info(focus_channel_id = nil)

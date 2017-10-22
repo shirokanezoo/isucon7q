@@ -20,7 +20,6 @@ type Server struct {
 
 	Backend string
 	Timeout time.Duration
-	Logging bool
 }
 
 func (s *Server) Wait() {
@@ -75,10 +74,6 @@ func (s *Server) initRedis() {
 					log.Println("PubSub error")
 					log.Fatal(err.Error())
 					break
-				}
-
-				if s.Logging {
-					log.Println("Receive Message")
 				}
 
 				for rec := range s.receivers {

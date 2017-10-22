@@ -4,6 +4,40 @@ require 'sinatra/base'
 require 'hiredis'
 require 'redis'
 
+module MysqlMonkeyPatch
+  def xquery(query, *args)
+    s = Time.now
+    r = super
+    e = Time.now
+
+    c0 = caller_locations[0]
+    c1 = caller_locations[1]
+
+    cstr0 = "#{File.basename(c0.path)}:#{c0.lineno}:#{c0.label}" if c0
+    cstr1 = "#{File.basename(c1.path)}:#{c1.lineno}:#{c1.label}" if c1
+
+    puts "type:mysql\tmode:xquery\tms:#{(e-s) * 1000}\tquery:#{query}\targs:#{args.inspect}\tcaller0:#{cstr0}\tcaller1:#{cstr1}"
+    r
+  end
+
+  def query(query, *args)
+    s = Time.now
+    r = super
+    e = Time.now
+
+    c0 = caller_locations[0]
+    return r if c0.label == 'xquery'.freeze
+
+    c1 = caller_locations[1]
+    cstr0 = "#{File.basename(c0.path)}:#{c0.lineno}:#{c0.label}" if c0
+    cstr1 = "#{File.basename(c1.path)}:#{c1.lineno}:#{c1.label}" if c1
+
+    puts "type:mysql\tmode:query\tms:#{(e-s) * 1000}\tquery:#{query}\targs:#{args.inspect}\tcaller0:#{cstr0}\tcaller1:#{cstr1}"
+    r
+  end
+
+end
+
 class App < Sinatra::Base
   configure do
     set :session_secret, 'tonymoris'
@@ -361,16 +395,19 @@ class App < Sinatra::Base
   end
 
   def db
-    Thread.current[:isubata_db] ||= Mysql2::Client.new(
+    return Thread.current[:isubata_db] if Thread.current[:isubata_db]
+    client = Mysql2::Client.new(
       host: ENV.fetch('ISUBATA_DB_HOST') { 'localhost' },
       port: ENV.fetch('ISUBATA_DB_PORT') { '3306' },
       username: ENV.fetch('ISUBATA_DB_USER') { 'root' },
       password: ENV.fetch('ISUBATA_DB_PASSWORD') { '' },
       database: 'isubata',
       encoding: 'utf8mb4'
-    ).tap do |mysql|
-      mysql.query('SET SESSION sql_mode=\'TRADITIONAL,NO_AUTO_VALUE_ON_ZERO,ONLY_FULL_GROUP_BY\'')
-    end
+    )
+    client.extend(MysqlMonkeyPatch) unless ENV['ISUCON7_DISABLE_LOGS'] == '1'
+    client.query('SET SESSION sql_mode=\'TRADITIONAL,NO_AUTO_VALUE_ON_ZERO,ONLY_FULL_GROUP_BY\'')
+    Thread.current[:isubata_db] = client
+    client
   end
 
   def db_get_user(user_id)

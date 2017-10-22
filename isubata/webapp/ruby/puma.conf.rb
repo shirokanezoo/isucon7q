@@ -1,6 +1,6 @@
 workers 2
 if Socket.gethostname == 'app0213'
-  threads 32,64
+  threads 64,64
 else
   threads 32,32
 end

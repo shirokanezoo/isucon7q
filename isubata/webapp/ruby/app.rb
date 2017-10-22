@@ -420,7 +420,7 @@ class App < Sinatra::Base
 
         avatar_name = digest + ext
         path = File.join(icons_dir, avatar_name)
-        FileUtils.cp(file[:tempfile].path, path) unless File.exists?(path)
+        File.binwrite(path, data) unless File.exists?(path)
       end
     end
 

@@ -487,6 +487,21 @@ class App < Sinatra::Base
     "isubata:total_messages"
   end
 
+  def redis_fetch(key, ttl: nil)
+    e =  redis.get(key)
+    if e
+      MessagePack.unpack e
+    else
+      yield.tap do |r|
+        if ttl
+          redis.psetex(key, ms, r.to_msgpack)
+        else
+          redis.set(key, r.to_msgpack)
+        end
+      end
+    end
+  end
+
   #def redis_key_unreads(user_id, channel_id)
   #  "isubata:unreads:#{user_id}:#{channel_id}"
   #end

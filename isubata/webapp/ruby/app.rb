@@ -17,7 +17,7 @@ class AwesomeFetch
     @lock = Mutex.new
   end
 
-  def wait(timeout: 10)
+  def wait(timeout: 5)
     @lock.synchronize do
       @subscribers[Thread.current] = true
     end

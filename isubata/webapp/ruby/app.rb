@@ -266,7 +266,9 @@ class App < Sinatra::Base
     end
 
     unless request.env['HTTP_X_AWESOME_PROXY']
+      response.headers['X-Awesome-Fetch'] = 'on'
       unless session.delete(:bakusoku)
+        response.headers['X-Awesome-Fetch'] = 'waited'
         AwesomeFetch.instance.wait
       end
     end

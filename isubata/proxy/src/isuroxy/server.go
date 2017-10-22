@@ -38,6 +38,7 @@ func (s *Server) Director(request *http.Request) {
 	s.Wait()
 	request.URL.Scheme = "http"
 	request.URL.Host = s.Backend
+	request.Header.Set("X-Awesome-Proxy", "1")
 }
 
 func (s *Server) initRedis() {

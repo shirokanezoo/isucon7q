@@ -6,7 +6,7 @@ WorkingDirectory=/home/isucon/isubata/webapp/ruby
 EnvironmentFile=/home/isucon/env.sh
 Environment=RACK_ENV=production
 
-ExecStart = /bundle exec puma -p 5000 -t 10
+ExecStart = /home/isucon/isubata/webapp/start.sh
 
 Restart   = always
 Type      = simple

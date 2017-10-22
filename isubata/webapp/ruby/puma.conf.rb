@@ -6,7 +6,7 @@ else
 end
 
 bind 'tcp://0.0.0.0:5000'
-bind 'unix:///run/isubata/puma.sock'
+bind 'unix:///run/isubata/puma.sock?backlog=2048'
 
 stdout_redirect '/home/isucon/puma.out', '/home/isucon/puma.err', true
 

@@ -8,6 +8,8 @@ GEM
     mysql2 (0.4.9)
     puma (3.10.0)
     rack (2.0.3)
+    rack-ltsv_logger (0.0.3)
+      rack
     rack-protection (2.0.0)
       rack
     redis (3.3.3)
@@ -32,6 +34,7 @@ DEPENDENCIES
   hiredis
   mysql2
   puma
+  rack-ltsv_logger
   redis
   sinatra
   sinatra-contrib

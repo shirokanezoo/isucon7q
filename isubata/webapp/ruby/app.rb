@@ -5,6 +5,10 @@ require 'hiredis'
 require 'redis'
 
 module MysqlMonkeyPatch
+  def logger
+    @logger ||= VanillaLogger.new('/tmp/isu-query.log')
+  end
+
   def xquery(query, *args)
     s = Time.now
     r = super
@@ -16,7 +20,7 @@ module MysqlMonkeyPatch
     cstr0 = "#{File.basename(c0.path)}:#{c0.lineno}:#{c0.label}" if c0
     cstr1 = "#{File.basename(c1.path)}:#{c1.lineno}:#{c1.label}" if c1
 
-    puts "type:mysql\tmode:xquery\tms:#{(e-s) * 1000}\tquery:#{query}\targs:#{args.inspect}\tcaller0:#{cstr0}\tcaller1:#{cstr1}"
+    logger.write "type:mysql\tmode:xquery\tms:#{(e-s) * 1000}\tquery:#{query}\targs:#{args.inspect}\tcaller0:#{cstr0}\tcaller1:#{cstr1}\n"
     r
   end
 
@@ -32,7 +36,7 @@ module MysqlMonkeyPatch
     cstr0 = "#{File.basename(c0.path)}:#{c0.lineno}:#{c0.label}" if c0
     cstr1 = "#{File.basename(c1.path)}:#{c1.lineno}:#{c1.label}" if c1
 
-    puts "type:mysql\tmode:query\tms:#{(e-s) * 1000}\tquery:#{query}\targs:#{args.inspect}\tcaller0:#{cstr0}\tcaller1:#{cstr1}"
+    logger.write "type:mysql\tmode:query\tms:#{(e-s) * 1000}\tquery:#{query}\targs:#{args.inspect}\tcaller0:#{cstr0}\tcaller1:#{cstr1}\n"
     r
   end
 

@@ -340,7 +340,7 @@ class App < Sinatra::Base
     rows = db.query('SELECT `name`, `data` FROM `image`')
 
     rows.each do |row|
-      File.write(File.join(icons_dir, row['name']), row['data'])
+      File.binwrite(File.join(icons_dir, row['name']), row['data'])
     end
 
     return "OK"

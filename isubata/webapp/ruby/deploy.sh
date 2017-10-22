@@ -1,6 +1,6 @@
 #!/bin/bash -e
 
-cd ~/isubata/webapp/ruby/deploy.sh
+cd ~/isubata/webapp/ruby/
 git pull
 mkdir ~/vendor || :
 bundle check || bundle install --path ~/vendor/bundle --jobs 300

@@ -3,6 +3,67 @@ require 'mysql2'
 require 'sinatra/base'
 require 'hiredis'
 require 'redis'
+require 'timeout'
+
+class AwesomeFetch
+  STREAM_KEY = 'isubata:stream:message'
+
+  def self.instance
+    @instance ||= AwesomeFetch.new.tap(&:start)
+  end
+
+  def initialize()
+    @subscribers = {}
+    @lock = Mutex.new
+  end
+
+  def wait(timeout: 10)
+    @lock.synchronize do
+      @subscribers[Thread.current] = true
+    end
+    sleep timeout
+  ensure
+    @lock.synchronize do
+      @subscribers.delete(Thread.current)
+    end
+  end
+
+  def connect_redis
+    Redis.new(url: ENV.fetch('ISUBATA_REDIS_URL', 'redis://localhost:6379/0'))
+  end
+
+  def start
+    @thread = Thread.new do
+      redis = connect_redis()
+      redis.subscribe(STREAM_KEY) do |on|
+        on.subscribe do |ch, subs|
+          puts "AwesomeFetch subscribed to #{ch.inspect} (#{subs} subscriptions)"
+        end
+
+        on.message do |ch, message|
+          payload = message.empty? ? nil : MessagePack.unpack(message)
+          on_payload(payload)
+        end
+      end
+    rescue Exception => e
+      $stderr.puts "AwesomeFetch ERROR: #{e.inspect}\n\t#{e.backtrace.join("\n\t")}"
+      sleep 1
+      retry
+    end.tap do |th|
+      th.abort_on_exception = true
+    end
+  end
+
+  def on_payload(payload)
+    @subscribers.each_key do |th|
+      th.wakeup
+    end
+  end
+end
+
+AwesomeFetch.instance.start
+
+# AwesomeFetch.
 
 module MysqlMonkeyPatch
   def logger
@@ -201,7 +262,7 @@ class App < Sinatra::Base
       return 403
     end
 
-    sleep 1.0
+    AwesomeFetch.instance.wait
 
     rs = redis.hgetall(redis_key_total_messages)
 
@@ -447,6 +508,7 @@ class App < Sinatra::Base
     messages = statement.execute(channel_id, user_id, content)
     statement.close
     redis.hincrby(redis_key_total_messages, channel_id, 1)
+    redis.publish(AwesomeFetch::STREAM_KEY, '')
     messages
   end
 

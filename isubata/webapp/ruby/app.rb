@@ -349,7 +349,7 @@ class App < Sinatra::Base
   private
 
   def icons_dir
-    @icons_dir ||= "#{ENV['HOME']}/icons"
+    @icons_dir ||= "#{ENV['HOME']}/isucon/public/icons"
   end
 
   def db

@@ -1,0 +1,22 @@
+[Unit]
+Description = isucon7 qualifier proxy application for fetch
+
+[Service]
+WorkingDirectory=/home/isucon/isubata/proxy
+EnvironmentFile=/home/isucon/env.sh
+Environment=RACK_ENV=production
+
+ExecStart = /home/isucon/isubata/proxy/bin/isuroxy
+
+Restart   = always
+Type      = simple
+User      = isucon
+Group     = isucon
+
+RuntimeDirectory=isubata
+
+LimitNOFILE=16384
+LimitNOFILESoft=16384
+
+[Install]
+WantedBy = multi-user.target

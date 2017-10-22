@@ -252,6 +252,8 @@ class App < Sinatra::Base
     max_message_id = rows.empty? ? 0 : rows.map {  |row| row['id'] }.max
     redis.hset(redis_key_lastreads(user_id), channel_id, max_message_id)
 
+    session[:bakusoku] = true
+
     content_type :json
     response.to_json
   end
@@ -262,7 +264,9 @@ class App < Sinatra::Base
       return 403
     end
 
-    AwesomeFetch.instance.wait
+    unless session.delete(:bakusoku)
+      AwesomeFetch.instance.wait
+    end
 
     rs = redis.hgetall(redis_key_total_messages)
 

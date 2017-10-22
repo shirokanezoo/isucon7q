@@ -241,7 +241,7 @@ class App < Sinatra::Base
     @self_profile = user['id'] == @user['id']
     erb :profile
   end
-  
+
   get '/add_channel' do
     if user.nil?
       return redirect '/login', 303
@@ -332,6 +332,16 @@ class App < Sinatra::Base
       return row['data']
     end
     404
+  end
+
+  post '/dump/icons' do
+    rows = db.query('SELECT `name`, `data` FROM `image`')
+
+    rows.each do |row|
+      File.write("#{ENV['HOME']}/icons/#{name}", data)
+    end
+
+    return "OK"
   end
 
   private

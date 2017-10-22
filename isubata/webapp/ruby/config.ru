@@ -1,6 +1,5 @@
 require './app'
-require 'stackprof'
-
+#require 'stackprof'
 #Dir.mkdir('/tmp/stackprof') unless File.exist?('/tmp/stackprof')
 #use StackProf::Middleware, enabled: true, mode: :cpu, interval: 500, save_every: 20, path: '/tmp/stackprof'
 

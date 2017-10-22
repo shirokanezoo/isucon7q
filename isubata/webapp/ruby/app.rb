@@ -1,6 +1,8 @@
 require 'digest/sha1'
 require 'mysql2'
 require 'sinatra/base'
+require 'hiredis'
+require 'redis'
 
 class App < Sinatra::Base
   configure do
@@ -350,6 +352,10 @@ class App < Sinatra::Base
 
   def icons_dir
     @icons_dir ||= "#{ENV['HOME']}/public/icons"
+  end
+
+  def redis
+    Thread.current[:isubata_redis] ||= Redis.new(url: ENV.fetch('ISUBATA_REDIS_URL', 'redis://localhost:6379/0'))
   end
 
   def db

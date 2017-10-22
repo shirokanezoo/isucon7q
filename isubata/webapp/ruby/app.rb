@@ -415,8 +415,8 @@ class App < Sinatra::Base
           return 400
         end
 
-        data = file[:tempfile].read(1024)
-        digest = Digest::SHA1.hexdigest("#{file[:tempfile].size}.#{data}")
+        data = file[:tempfile].read
+        digest = Digest::SHA1.hexdigest(data)
 
         avatar_name = digest + ext
         path = File.join(icons_dir, avatar_name)

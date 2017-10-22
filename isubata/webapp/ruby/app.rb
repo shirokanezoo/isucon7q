@@ -427,7 +427,7 @@ class App < Sinatra::Base
     keys = []
     values = []
 
-    if !avatar_name.nil? && !avatar_data.nil?
+    if !avatar_name.nil?
       # statement = db.prepare('INSERT INTO image (name, data) VALUES (?, ?)')
       # statement.execute(avatar_name, avatar_data)
       # statement.close

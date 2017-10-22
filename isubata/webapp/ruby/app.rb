@@ -149,6 +149,7 @@ class App < Sinatra::Base
     channel_ids.each do |ch|
       statement = db.prepare('SELECT COUNT(*) as cnt FROM message WHERE channel_id = ?')
       cnt = statement.execute(ch).first['cnt']
+      statement.close
       redis.hset(redis_key_total_messages, ch, cnt)
     end
 
@@ -273,6 +274,7 @@ class App < Sinatra::Base
     redis.hgetall(redis_key_lastreads(user_id)).each do |ch, last|
       statement = db.prepare('SELECT COUNT(*) as cnt FROM message WHERE channel_id = ? AND ? < id')
       unread = statement.execute(ch, last).first['cnt']
+      statement.close
 
       rs[ch.to_s] = unread
     end

@@ -1,5 +1,7 @@
 #!/bin/bash -ex
 
+export PATH=/home/isucon/local/go/bin:${PATH}
+
 cd ~/isubata/proxy
 
 make build

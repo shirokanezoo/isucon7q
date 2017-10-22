@@ -299,13 +299,15 @@ class App < Sinatra::Base
 
         avatar_name = digest + ext
         avatar_data = data
+        path = File.join(icons_dir, avatar_name)
+        File.write(path, avatar_data) unless File.exists?(path)
       end
     end
 
     if !avatar_name.nil? && !avatar_data.nil?
-      statement = db.prepare('INSERT INTO image (name, data) VALUES (?, ?)')
-      statement.execute(avatar_name, avatar_data)
-      statement.close
+      # statement = db.prepare('INSERT INTO image (name, data) VALUES (?, ?)')
+      # statement.execute(avatar_name, avatar_data)
+      # statement.close
       statement = db.prepare('UPDATE user SET avatar_icon = ? WHERE id = ?')
       statement.execute(avatar_name, user['id'])
       statement.close
@@ -338,13 +340,17 @@ class App < Sinatra::Base
     rows = db.query('SELECT `name`, `data` FROM `image`')
 
     rows.each do |row|
-      File.write("#{ENV['HOME']}/icons/#{row['name']}", row['data'])
+      File.write(File.join(icons_dir, row['name']), row['data'])
     end
 
     return "OK"
   end
 
   private
+
+  def icons_dir
+    @icons_dir ||= "#{ENV['HOME']}/icons"
+  end
 
   def db
     return @db_client if defined?(@db_client)

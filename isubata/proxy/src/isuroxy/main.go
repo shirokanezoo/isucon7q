@@ -9,7 +9,7 @@ import (
 func main() {
 	backend := os.Getenv("ISUROXY_BACKEND")
 	if len(backend) == 0 {
-		backend = "localhost:8080"
+		backend = "localhost:5000"
 	}
 
 	timeout := os.Getenv("ISUROXY_TIMEOUT")

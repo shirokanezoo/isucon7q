@@ -55,7 +55,7 @@ class AwesomeFetch
   end
 
   def on_payload(payload)
-    @subscribers.each_key do |th|
+    @subscribers.dup.each_key do |th|
       th.wakeup
     end
   end

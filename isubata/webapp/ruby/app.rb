@@ -104,7 +104,8 @@ class AwesomeFetch
       reset
     when 'init'
       puts "AwesomeFetch Init #{$$}"
-      init
+      reset
+      on_init
     end
   end
 
@@ -112,9 +113,52 @@ class AwesomeFetch
     bin = (@messages[message['channel_id']] ||= MessageBin.new)
     bin.push message
   end
+
+  def init(&block)
+    @init = block
+  end
+
+  def on_init
+    @init&.call
+  end
 end
 
 AwesomeFetch.instance.start
+AwesomeFetch.instance.init do
+  db = Mysql2::Client.new(
+      host: ENV.fetch('ISUBATA_DB_HOST') { 'localhost' },
+      port: ENV.fetch('ISUBATA_DB_PORT') { '3306' },
+      username: ENV.fetch('ISUBATA_DB_USER') { 'root' },
+      password: ENV.fetch('ISUBATA_DB_PASSWORD') { '' },
+      database: 'isubata',
+      encoding: 'utf8mb4',
+      reconnect: true,
+      init_command: %q!SET SESSION sql_mode='TRADITIONAL,NO_AUTO_VALUE_ON_ZERO,ONLY_FULL_GROUP_BY'!
+    )
+
+    all_users = {}
+    db.query("SELECT id, name, display_name, avatar_icon FROM user").each do  |row|
+      all_users[row['id']] = row.select { |k, v| %w[name display_name avatar_icon].include?(k) }
+    end
+
+    db.query('SELECT id FROM channel').each do |ch|
+      db.query("SELECT * FROM message WHERE channel_id = #{ch['id']} ORDER BY id DESC LIMIT #{MessageBin::LIMIT}").to_a.reverse_each do |row|
+        user = all_users.fetch row['user_id']
+        AwesomeFetch.instance.on_message(
+                    {
+                    'type' => 'message',
+                    'id' => row['id'],
+                    'channel_id' => row['channel_id'],
+                    'user' => { 'name' => user['name'], 'display_name' => user['display_name'], 'avatar_icon' => user['avatar_icon'] },
+                    'date' => row['created_at'].strftime("%Y/%m/%d %H:%M:%S"),
+                    'content' => row['content'],
+                    },
+                     )
+      end
+    end
+end
+AwesomeFetch.instance.on_init
+
 
 # AwesomeFetch.
 
@@ -206,29 +250,7 @@ class App < Sinatra::Base
       redis.hset(redis_key_total_messages, ch, cnt)
     end
 
-    redis.publish('isubata:stream:message', {'type' => 'reset'}.to_msgpack)
-    redis.publish('isubata:stream:message', {'type' => 'load'}.to_msgpack)
-
-    all_users = {}
-    db.query("SELECT id, name, display_name, avatar_icon FROM user").each do  |row|
-      all_users[row['id']] = row.select { |k, v| %w[name display_name avatar_icon].include?(k) }
-    end
-
-    db.query('SELECT id FROM channel').each do |ch|
-      db.query("SELECT * FROM message WHERE channel_id = #{ch['id']} ORDER BY id DESC LIMIT #{MessageBin::LIMIT}").to_a.reverse_each do |row|
-        user = all_users.fetch row['user_id']
-        redis.publish('isubata:stream:message2',
-                    {
-                    'type' => 'message',
-                    'id' => row['id'],
-                    'channel_id' => row['channel_id'],
-                    'user' => { 'name' => user['name'], 'display_name' => user['display_name'], 'avatar_icon' => user['avatar_icon'] },
-                    'date' => row['created_at'].strftime("%Y/%m/%d %H:%M:%S"),
-                    'content' => row['content'],
-                    }.to_msgpack,
-                     )
-      end
-    end
+    redis.publish('isubata:stream:message', {'type' => 'init'}.to_msgpack)
 
     204
   end

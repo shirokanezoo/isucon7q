@@ -22,9 +22,12 @@ func main() {
 		ts = 5
 	}
 
+	logging := os.Getenv("ISUROXY_LOGGING") == "1"
+
 	s := &Server{
 		Backend: backend,
 		Timeout: time.Duration(ts) * time.Second,
+		Logging: logging,
 	}
 
 	s.Start()

@@ -93,6 +93,8 @@ func (s *Server) Start() {
 		Handler: rp,
 	}
 
+	server.SetKeepAlivesEnabled(true)
+
 	log.Println("=== Started ===")
 	log.Printf("Backend: %s / Timeout: %s", s.Backend, s.Timeout)
 

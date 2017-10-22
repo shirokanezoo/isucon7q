@@ -74,6 +74,10 @@ class App < Sinatra::Base
   end
 
   get '/initialize' do
+    redis.keys('isubata:*').each_slice(100) do |ks|
+      redis.del(*ks)
+    end
+
     db.query("DELETE FROM user WHERE id > 1000")
     db.query("DELETE FROM image WHERE id > 1001")
     db.query("DELETE FROM channel WHERE id > 10")

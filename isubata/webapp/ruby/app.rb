@@ -427,6 +427,7 @@ class App < Sinatra::Base
   end
 
   def get_users(ids)
+    return {} if ids.empty?
     rows = db.query("SELECT id, name, display_name, avatar_icon FROM user WHERE id IN (#{ids.join(',')})")
 
     dict = {}

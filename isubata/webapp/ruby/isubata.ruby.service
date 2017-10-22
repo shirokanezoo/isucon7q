@@ -1,5 +1,6 @@
 [Unit]
 Description = isucon7 qualifier main application in ruby
+Before = nginx.service
 
 [Service]
 WorkingDirectory=/home/isucon/isubata/webapp/ruby

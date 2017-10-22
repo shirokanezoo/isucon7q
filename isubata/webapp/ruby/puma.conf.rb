@@ -1,5 +1,9 @@
 workers 2
-threads 32,32
+if Socket.gethostname == 'app0213'
+  threads 32,64
+else
+  threads 32,32
+end
 
 bind 'tcp://0.0.0.0:5000'
 bind 'unix:///run/isubata/puma.sock'

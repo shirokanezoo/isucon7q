@@ -1,0 +1,19 @@
+[Unit]
+Description = isucon7 qualifier main application in ruby
+
+[Service]
+WorkingDirectory=/home/isucon/isubata/webapp/ruby
+EnvironmentFile=/home/isucon/env.sh
+Environment=RACK_ENV=production
+
+ExecStart = /bundle exec puma -p 5000 -t 10
+
+Restart   = always
+Type      = simple
+User      = isucon
+Group     = isucon
+
+RuntimeDirectory=isubata
+
+[Install]
+WantedBy = multi-user.target

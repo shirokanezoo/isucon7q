@@ -206,6 +206,7 @@ class App < Sinatra::Base
       return 403
     end
     session[:user_id] = row['id']
+    session[:bakusoku] = true
     redirect '/', 303
   end
 

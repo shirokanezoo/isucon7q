@@ -405,20 +405,32 @@ class App < Sinatra::Base
     Thread.current[:isubata_redis] ||= Redis.new(url: ENV.fetch('ISUBATA_REDIS_URL', 'redis://localhost:6379/0'))
   end
 
+  # def db
+  #   return Thread.current[:isubata_db] if Thread.current[:isubata_db]
+  #   client = Mysql2::Client.new(
+  #     host: ENV.fetch('ISUBATA_DB_HOST') { 'localhost' },
+  #     port: ENV.fetch('ISUBATA_DB_PORT') { '3306' },
+  #     username: ENV.fetch('ISUBATA_DB_USER') { 'root' },
+  #     password: ENV.fetch('ISUBATA_DB_PASSWORD') { '' },
+  #     database: 'isubata',
+  #     encoding: 'utf8mb4'
+  #   )
+  #   client.extend(MysqlMonkeyPatch) unless ENV['ISUCON7_DISABLE_LOGS'] == '1'
+  #   client.query('SET SESSION sql_mode=\'TRADITIONAL,NO_AUTO_VALUE_ON_ZERO,ONLY_FULL_GROUP_BY\'')
+  #   Thread.current[:isubata_db] = client
+  #   client
+  # end
   def db
-    return Thread.current[:isubata_db] if Thread.current[:isubata_db]
-    client = Mysql2::Client.new(
+    Thread.current[:isubata_db] ||= Mysql2::Client.new(
       host: ENV.fetch('ISUBATA_DB_HOST') { 'localhost' },
       port: ENV.fetch('ISUBATA_DB_PORT') { '3306' },
       username: ENV.fetch('ISUBATA_DB_USER') { 'root' },
       password: ENV.fetch('ISUBATA_DB_PASSWORD') { '' },
       database: 'isubata',
       encoding: 'utf8mb4'
-    )
-    client.extend(MysqlMonkeyPatch) unless ENV['ISUCON7_DISABLE_LOGS'] == '1'
-    client.query('SET SESSION sql_mode=\'TRADITIONAL,NO_AUTO_VALUE_ON_ZERO,ONLY_FULL_GROUP_BY\'')
-    Thread.current[:isubata_db] = client
-    client
+    ).tap do |mysql|
+      mysql.query('SET SESSION sql_mode=\'TRADITIONAL,NO_AUTO_VALUE_ON_ZERO,ONLY_FULL_GROUP_BY\'')
+    end
   end
 
   def db_get_user(user_id)

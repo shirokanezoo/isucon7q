@@ -30,13 +30,11 @@ class MessageBin
   end
 end
 
+require 'singleton'
 class AwesomeFetch
   STREAM_KEY = 'isubata:stream:message'
   STREAM_KEY2 = 'isubata:stream:message2'
-
-  def self.instance
-    @instance ||= AwesomeFetch.new.tap(&:start)
-  end
+  include Singleton
 
   def initialize()
     @subscribers = {}
@@ -98,6 +96,7 @@ class AwesomeFetch
 
     case payload['type']
     when 'message'
+      p payload
       on_message payload
     when 'reset'
       puts "AwesomeFetch Reset #{$$}"
@@ -106,6 +105,7 @@ class AwesomeFetch
       puts "AwesomeFetch Init #{$$}"
       reset
       on_init
+      puts "AwesomeFetch Init DONE #{$$}"
     end
   end
 
@@ -337,7 +337,7 @@ class App < Sinatra::Base
     last_message_id = params[:last_message_id].to_i
 
     bin = AwesomeFetch.instance.channel(channel_id)
-    res= bin&.since(last_message_id)
+    res = bin&.since(last_message_id)
 
     unless res
       statement = db.prepare('SELECT * FROM message WHERE id > ? AND channel_id = ? ORDER BY id DESC LIMIT 100')
@@ -637,12 +637,7 @@ class App < Sinatra::Base
   end
 
   def db_add_message(channel_id, user_id, content)
-    statement = db.prepare('INSERT INTO message (channel_id, user_id, content, created_at) VALUES (?, ?, ?, ?)')
     time = Time.now
-    messages = statement.execute(channel_id, user_id, content, time)
-    statement.close
-
-    redis.hincrby(redis_key_total_messages, channel_id, 1)
     redis.publish(AwesomeFetch::STREAM_KEY,
                   {
                   'type' => 'message',
@@ -653,6 +648,13 @@ class App < Sinatra::Base
                   'content' => content,
                   }.to_msgpack
                  )
+
+    statement = db.prepare('INSERT INTO message (channel_id, user_id, content, created_at) VALUES (?, ?, ?, ?)')
+    messages = statement.execute(channel_id, user_id, content, time)
+    statement.close
+
+    redis.hincrby(redis_key_total_messages, channel_id, 1)
+
     session[:bakusoku] = true
     messages
   end

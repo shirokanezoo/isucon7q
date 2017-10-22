@@ -131,6 +131,7 @@ class App < Sinatra::Base
     name = params[:name]
     statement = db.prepare('SELECT * FROM user WHERE name = ?')
     row = statement.execute(name).first
+    statement.close
     if row.nil? || row['password'] != Digest::SHA1.hexdigest(row['salt'] + params[:password])
       return 403
     end
@@ -164,6 +165,7 @@ class App < Sinatra::Base
     last_message_id = params[:last_message_id].to_i
     statement = db.prepare('SELECT * FROM message WHERE id > ? AND channel_id = ? ORDER BY id DESC LIMIT 100')
     rows = statement.execute(last_message_id, channel_id).to_a
+    statement.close
     users = get_users(rows.map { |r| r['user_id'] }.uniq)
     response = []
     rows.each do |row|
@@ -185,6 +187,7 @@ class App < Sinatra::Base
       'ON DUPLICATE KEY UPDATE message_id = ?, updated_at = NOW()',
     ].join)
     statement.execute(user_id, channel_id, max_message_id, max_message_id)
+    statement.close
 
     content_type :json
     response.to_json

@@ -374,6 +374,7 @@ class App < Sinatra::Base
     statement.close
 
     redis.hset(redis_key_total_messages, channel_id, 0)
+    redis.publish(AwesomeFetch::STREAM_KEY, '')
     redirect "/channel/#{channel_id}", 303
   end
 

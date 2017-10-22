@@ -329,6 +329,7 @@ class App < Sinatra::Base
     return 400 if @page > @max_page
 
     @channels, @description = get_channel_list_info(@channel_id)
+    session[:bakusoku] = true
     erb :history
   end
 

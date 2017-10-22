@@ -26,6 +26,7 @@ GEM
       rack-protection (= 2.0.0)
       sinatra (= 2.0.0)
       tilt (>= 1.3, < 3)
+    stackprof (0.2.10)
     tilt (2.0.8)
 
 PLATFORMS
@@ -40,6 +41,7 @@ DEPENDENCIES
   redis
   sinatra
   sinatra-contrib
+  stackprof
 
 BUNDLED WITH
    1.15.4

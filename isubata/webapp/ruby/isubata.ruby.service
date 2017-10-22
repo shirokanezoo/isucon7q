@@ -15,5 +15,8 @@ Group     = isucon
 
 RuntimeDirectory=isubata
 
+LimitNOFILE=16384
+LimitNOFILESoft=16384
+
 [Install]
 WantedBy = multi-user.target

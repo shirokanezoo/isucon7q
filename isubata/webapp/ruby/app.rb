@@ -251,6 +251,7 @@ class App < Sinatra::Base
     end
 
     redis.publish('isubata:stream:message', {'type' => 'init'}.to_msgpack)
+    sleep 3
 
     204
   end

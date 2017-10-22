@@ -333,8 +333,8 @@ class App < Sinatra::Base
         # statement.close
       end
       response.headers['X-Awesome-Fetch'] = 'miss'
+      res.reverse! # TODO:
     end
-    res.reverse! # TODO:
 
     max_message_id = res.empty? ? 0 : res.map { |_| _['id'] }.max
     redis.hset(redis_key_lastreads(user_id), channel_id, max_message_id)
